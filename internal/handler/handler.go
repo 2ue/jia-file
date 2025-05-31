@@ -2,25 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	"jia-file/api"
 	"jia-file/internal/file"
+	"jia-file/internal/logger"
 	"net/http"
 	"path/filepath"
-)
-
-// Response 统一响应格式
-type Response struct {
-	Code    int         `json:"code"`    // 状态码：0表示成功，非0表示失败
-	Message string      `json:"message"` // 状态描述
-	Data    interface{} `json:"data"`    // 响应数据
-}
-
-// 状态码定义
-const (
-	CodeSuccess        = 0    // 成功
-	CodeParamMissing   = 1001 // 参数缺失
-	CodeMethodNotAllow = 1002 // 方法不允许
-	CodePathNotExist   = 1003 // 路径不存在
-	CodeOperationFail  = 1004 // 操作失败
 )
 
 // Handler HTTP处理器
@@ -38,7 +24,7 @@ func NewHandler(fileService file.Service) *Handler {
 // writeResponse 写入统一格式的响应
 func (h *Handler) writeResponse(w http.ResponseWriter, code int, message string, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
-	response := Response{
+	response := api.Response{
 		Code:    code,
 		Message: message,
 		Data:    data,
@@ -50,50 +36,52 @@ func (h *Handler) writeResponse(w http.ResponseWriter, code int, message string,
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		h.writeResponse(w, CodeParamMissing, "Missing path parameter", nil)
+		h.writeResponse(w, api.CodeParamMissing, "Missing path parameter", nil)
 		return
 	}
 
 	files, err := h.fileService.List(path)
 	if err != nil {
-		h.writeResponse(w, CodeOperationFail, err.Error(), nil)
+		logger.Error("List error: %v", err)
+		h.writeResponse(w, api.CodeOperationFail, err.Error(), nil)
 		return
 	}
 
-	h.writeResponse(w, CodeSuccess, "success", files)
+	h.writeResponse(w, api.CodeSuccess, "success", files)
 }
 
 // CreateDir 创建目录
 func (h *Handler) CreateDir(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.writeResponse(w, CodeMethodNotAllow, "Method not allowed", nil)
+		h.writeResponse(w, api.CodeMethodNotAllow, "Method not allowed", nil)
 		return
 	}
 
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		h.writeResponse(w, CodeParamMissing, "Missing path parameter", nil)
+		h.writeResponse(w, api.CodeParamMissing, "Missing path parameter", nil)
 		return
 	}
 
 	if err := h.fileService.CreateDir(path); err != nil {
-		h.writeResponse(w, CodeOperationFail, err.Error(), nil)
+		logger.Error("CreateDir error: %v", err)
+		h.writeResponse(w, api.CodeOperationFail, err.Error(), nil)
 		return
 	}
 
-	h.writeResponse(w, CodeSuccess, "Directory created successfully", nil)
+	h.writeResponse(w, api.CodeSuccess, "Directory created successfully", nil)
 }
 
 // CreateFile 创建文件
 func (h *Handler) CreateFile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.writeResponse(w, CodeMethodNotAllow, "Method not allowed", nil)
+		h.writeResponse(w, api.CodeMethodNotAllow, "Method not allowed", nil)
 		return
 	}
 
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		h.writeResponse(w, CodeParamMissing, "Missing path parameter", nil)
+		h.writeResponse(w, api.CodeParamMissing, "Missing path parameter", nil)
 		return
 	}
 
@@ -101,94 +89,98 @@ func (h *Handler) CreateFile(w http.ResponseWriter, r *http.Request) {
 	defer content.Close()
 
 	if err := h.fileService.CreateFile(path, nil); err != nil {
-		h.writeResponse(w, CodeOperationFail, err.Error(), nil)
+		logger.Error("CreateFile error: %v", err)
+		h.writeResponse(w, api.CodeOperationFail, err.Error(), nil)
 		return
 	}
 
-	h.writeResponse(w, CodeSuccess, "File created successfully", nil)
+	h.writeResponse(w, api.CodeSuccess, "File created successfully", nil)
 }
 
 // Delete 删除文件或目录
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		h.writeResponse(w, CodeMethodNotAllow, "Method not allowed", nil)
+		h.writeResponse(w, api.CodeMethodNotAllow, "Method not allowed", nil)
 		return
 	}
 
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		h.writeResponse(w, CodeParamMissing, "Missing path parameter", nil)
+		h.writeResponse(w, api.CodeParamMissing, "Missing path parameter", nil)
 		return
 	}
 
 	if err := h.fileService.Delete(path); err != nil {
-		h.writeResponse(w, CodeOperationFail, err.Error(), nil)
+		logger.Error("Delete error: %v", err)
+		h.writeResponse(w, api.CodeOperationFail, err.Error(), nil)
 		return
 	}
 
-	h.writeResponse(w, CodeSuccess, "File or directory deleted successfully", nil)
+	h.writeResponse(w, api.CodeSuccess, "File or directory deleted successfully", nil)
 }
 
 // Move 移动文件或目录
 func (h *Handler) Move(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.writeResponse(w, CodeMethodNotAllow, "Method not allowed", nil)
+		h.writeResponse(w, api.CodeMethodNotAllow, "Method not allowed", nil)
 		return
 	}
 
 	src := r.URL.Query().Get("src")
 	dst := r.URL.Query().Get("dst")
 	if src == "" || dst == "" {
-		h.writeResponse(w, CodeParamMissing, "Missing src or dst parameter", nil)
+		h.writeResponse(w, api.CodeParamMissing, "Missing src or dst parameter", nil)
 		return
 	}
 
 	if err := h.fileService.Move(src, dst); err != nil {
-		h.writeResponse(w, CodeOperationFail, err.Error(), nil)
+		logger.Error("Move error: %v", err)
+		h.writeResponse(w, api.CodeOperationFail, err.Error(), nil)
 		return
 	}
 
-	h.writeResponse(w, CodeSuccess, "File or directory moved successfully", nil)
+	h.writeResponse(w, api.CodeSuccess, "File or directory moved successfully", nil)
 }
 
 // Copy 复制文件或目录
 func (h *Handler) Copy(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.writeResponse(w, CodeMethodNotAllow, "Method not allowed", nil)
+		h.writeResponse(w, api.CodeMethodNotAllow, "Method not allowed", nil)
 		return
 	}
 
 	src := r.URL.Query().Get("src")
 	dst := r.URL.Query().Get("dst")
 	if src == "" || dst == "" {
-		h.writeResponse(w, CodeParamMissing, "Missing src or dst parameter", nil)
+		h.writeResponse(w, api.CodeParamMissing, "Missing src or dst parameter", nil)
 		return
 	}
 
 	if err := h.fileService.Copy(src, dst); err != nil {
-		h.writeResponse(w, CodeOperationFail, err.Error(), nil)
+		logger.Error("Copy error: %v", err)
+		h.writeResponse(w, api.CodeOperationFail, err.Error(), nil)
 		return
 	}
 
-	h.writeResponse(w, CodeSuccess, "File or directory copied successfully", nil)
+	h.writeResponse(w, api.CodeSuccess, "File or directory copied successfully", nil)
 }
 
 // GetInfo 获取文件信息
 func (h *Handler) GetInfo(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		h.writeResponse(w, CodeParamMissing, "Missing path parameter", nil)
+		h.writeResponse(w, api.CodeParamMissing, "Missing path parameter", nil)
 		return
 	}
 
 	info, err := h.fileService.GetInfo(path)
 	if err != nil {
-		println(err.Error());
-		h.writeResponse(w, CodeOperationFail, err.Error(), nil)
+		logger.Error("GetInfo error: %v", err)
+		h.writeResponse(w, api.CodeOperationFail, err.Error(), nil)
 		return
 	}
 
-	h.writeResponse(w, CodeSuccess, "success", info)
+	h.writeResponse(w, api.CodeSuccess, "success", info)
 }
 
 // CreateDocumentRequest 创建文档请求
@@ -201,19 +193,20 @@ type CreateDocumentRequest struct {
 // CreateDocument 创建文档处理函数
 func (h *Handler) CreateDocument(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.writeResponse(w, CodeMethodNotAllow, "Method not allowed", nil)
+		h.writeResponse(w, api.CodeMethodNotAllow, "Method not allowed", nil)
 		return
 	}
 
-	var req CreateDocumentRequest
+	var req api.CreateDocumentRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.writeResponse(w, CodeParamMissing, "Invalid request body", nil)
+		logger.Error("CreateDocument decode error: %v", err)
+		h.writeResponse(w, api.CodeParamMissing, "Invalid request body", nil)
 		return
 	}
 
 	// 验证请求参数
 	if req.Path == "" || req.Type == "" {
-		h.writeResponse(w, CodeParamMissing, "Path and type are required", nil)
+		h.writeResponse(w, api.CodeParamMissing, "Path and type are required", nil)
 		return
 	}
 
@@ -225,9 +218,10 @@ func (h *Handler) CreateDocument(w http.ResponseWriter, r *http.Request) {
 
 	// 创建文档
 	if err := h.fileService.CreateDocument(req.Path, req.Type, req.Content); err != nil {
-		h.writeResponse(w, CodeOperationFail, err.Error(), nil)
+		logger.Error("CreateDocument error: %v", err)
+		h.writeResponse(w, api.CodeOperationFail, err.Error(), nil)
 		return
 	}
 
-	h.writeResponse(w, CodeSuccess, "Document created successfully", nil)
+	h.writeResponse(w, api.CodeSuccess, "Document created successfully", nil)
 } 

@@ -17,7 +17,7 @@ type IgnoreConfig struct {
 func LoadIgnoreConfig(configPath string) (*IgnoreConfig, error) {
 	// 如果未指定配置文件路径，使用默认路径
 	if configPath == "" {
-		configPath = filepath.Join("config", "ignore.json")
+		configPath = filepath.Join("internal", "config", "ignore.json")
 	}
 
 	// 读取配置文件

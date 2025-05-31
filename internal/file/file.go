@@ -50,13 +50,11 @@ type Service interface {
 }
 
 // service 文件服务实现
-type service struct {
-	basePath string
-}
+type service struct{}
 
 // NewService 创建文件服务实例
-func NewService(basePath string) Service {
-	return &service{basePath: basePath}
+func NewService() Service {
+	return &service{}
 }
 
 // formatFileSize 将文件大小转换为人类可读的格式
@@ -117,13 +115,13 @@ func detectMimeType(path string, isDir bool) string {
 }
 
 // getFileInfo 获取单个文件的详细信息
-func getFileInfo(entry os.DirEntry, basePath string) (FileInfo, error) {
+func getFileInfo(entry os.DirEntry, path string) (FileInfo, error) {
 	info, err := entry.Info()
 	if err != nil {
 		return FileInfo{}, err
 	}
 
-	fullPath := filepath.Join(basePath, entry.Name())
+	fullPath := filepath.Join(path, entry.Name())
 	ext := filepath.Ext(entry.Name())
 	
 	mimeType := detectMimeType(fullPath, entry.IsDir())

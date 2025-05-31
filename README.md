@@ -1,0 +1,157 @@
+# Jia-File
+
+一个基于 Go 语言开发的简单文件管理系统，提供文件操作 API。
+
+## 功能特性
+
+- 文件列表查看
+- 创建文件和目录
+- 删除文件和目录
+- 移动和复制文件
+- 获取文件信息
+- 创建文档（支持多种格式）
+
+## 项目结构
+
+```
+.
+├── api/            # API 类型定义
+├── cmd/            # 主程序入口
+├── internal/       # 内部包
+│   ├── file/      # 文件操作
+│   ├── handler/   # HTTP 处理器
+│   ├── logger/    # 日志模块
+│   ├── middleware/# 中间件
+│   └── errors/    # 错误处理
+├── scripts/       # 脚本文件
+└── docs/          # 文档
+```
+
+## 快速开始
+
+### 环境要求
+
+- Go 1.16 或更高版本
+- Air (用于热更新，可选)
+
+### 安装依赖
+
+```bash
+# 安装 Air (用于热更新)
+go install github.com/cosmtrek/air@latest
+```
+
+### 运行项目
+
+#### 方式一：直接运行
+
+```bash
+# 编译项目
+go build -o jia-file.exe ./cmd/server
+
+# 运行服务器
+./jia-file.exe
+```
+
+#### 方式二：使用 Air 热更新（推荐开发时使用）
+
+```bash
+# 在项目根目录运行
+air
+```
+
+服务器将在 http://localhost:8190 启动。
+
+### API 端点
+
+- `GET /list?path=<path>` - 列出目录内容
+- `POST /mkdir?path=<path>` - 创建目录
+- `POST /touch?path=<path>` - 创建文件
+- `DELETE /delete?path=<path>` - 删除文件或目录
+- `POST /move?src=<src>&dst=<dst>` - 移动文件或目录
+- `POST /copy?src=<src>&dst=<dst>` - 复制文件或目录
+- `GET /info?path=<path>` - 获取文件信息
+- `POST /document` - 创建文档
+
+### 示例请求
+
+```bash
+# 列出目录内容
+curl "http://localhost:8190/list?path=./"
+
+# 创建目录
+curl -X POST "http://localhost:8190/mkdir?path=./test"
+
+# 创建文件
+curl -X POST "http://localhost:8190/touch?path=./test/file.txt"
+
+# 获取文件信息
+curl "http://localhost:8190/info?path=./test/file.txt"
+
+# 创建文档
+curl -X POST "http://localhost:8190/document" \
+  -H "Content-Type: application/json" \
+  -d '{"path":"./test/doc.md","type":"md","content":"# Hello World"}'
+```
+
+## 开发说明
+
+### 热更新配置
+
+项目使用 Air 进行热更新，配置文件为 `.air.toml`。主要配置包括：
+
+```toml
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/main.exe ./cmd/server"
+bin = "tmp/main.exe"
+include_ext = ["go", "tpl", "tmpl", "html"]
+exclude_dir = ["assets", "tmp", "vendor"]
+delay = 1000
+kill_delay = "0s"
+log = "build-errors.log"
+send_interrupt = false
+stop_on_error = true
+
+[log]
+time = false
+
+[color]
+main = "magenta"
+watcher = "cyan"
+build = "yellow"
+runner = "green"
+```
+
+### 日志
+
+日志文件位于 `logs` 目录下，按日期命名。包含以下级别的日志：
+- INFO: 普通信息
+- ERROR: 错误信息
+- DEBUG: 调试信息
+
+### 错误处理
+
+项目使用统一的错误处理机制，所有错误都会被记录到日志中，并返回统一的错误响应格式：
+
+```json
+{
+  "code": 1004,
+  "message": "错误信息",
+  "data": null
+}
+```
+
+## 贡献指南
+
+1. Fork 项目
+2. 创建特性分支
+3. 提交更改
+4. 推送到分支
+5. 创建 Pull Request
+
+## 许可证
+
+MIT License 
