@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -21,8 +19,7 @@ type Config struct {
 		Dir   string
 	}
 	File struct {
-		MaxSize          int64
-		AllowedExtensions []string
+		// 删除MaxSize和AllowedExtensions
 	}
 }
 
@@ -41,57 +38,32 @@ var (
 			Level: "info",
 			Dir:   "logs",
 		},
-		File: struct {
-			MaxSize          int64
-			AllowedExtensions []string
-		}{
-			MaxSize:          10 * 1024 * 1024, // 10MB
-			AllowedExtensions: []string{".txt", ".md", ".json", ".yaml", ".yml", ".go"},
-		},
+		File: struct{}{},
 	}
 )
 
 // LoadConfig 加载配置文件
 func LoadConfig(envPath string) (*Config, error) {
-	// 如果未指定配置文件路径，使用默认路径
 	if envPath == "" {
 		envPath = ".env"
 	}
-
-	// 加载 .env 文件
 	if err := godotenv.Load(envPath); err != nil {
-		// 如果文件不存在，使用默认配置
 		if os.IsNotExist(err) {
 			return &defaultConfig, nil
 		}
 		return nil, fmt.Errorf("error loading .env file: %v", err)
 	}
-
 	config := defaultConfig
-
-	// 从环境变量加载配置
-	if port := os.Getenv("SERVER_PORT"); port != "" {
+	if port := os.Getenv("PORT"); port != "" {
 		config.Server.Port = port
 	}
-
 	if level := os.Getenv("LOG_LEVEL"); level != "" {
 		config.Log.Level = level
 	}
-
 	if dir := os.Getenv("LOG_DIR"); dir != "" {
 		config.Log.Dir = dir
 	}
-
-	if maxSize := os.Getenv("MAX_FILE_SIZE"); maxSize != "" {
-		if size, err := strconv.ParseInt(maxSize, 10, 64); err == nil {
-			config.File.MaxSize = size
-		}
-	}
-
-	if exts := os.Getenv("ALLOWED_EXTENSIONS"); exts != "" {
-		config.File.AllowedExtensions = strings.Split(exts, ",")
-	}
-
+	// 删除MAX_FILE_SIZE和ALLOWED_EXTENSIONS相关解析
 	return &config, nil
 }
 

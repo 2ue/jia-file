@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"io"
+	"jia-file/internal/config"
 	"mime"
 	"net/http"
 	"os"
@@ -50,11 +51,14 @@ type Service interface {
 }
 
 // service 文件服务实现
-type service struct{}
+type service struct {
+	config *config.Config
+}
 
 // NewService 创建文件服务实例
 func NewService() Service {
-	return &service{}
+	cfg, _ := config.LoadConfig("")
+	return &service{config: cfg}
 }
 
 // formatFileSize 将文件大小转换为人类可读的格式
@@ -199,6 +203,7 @@ func (s *service) CreateFile(path string, content []byte) error {
 		return fmt.Errorf("failed to create parent directory: %v", err)
 	}
 
+	// 创建文件
 	return os.WriteFile(path, content, 0644)
 }
 

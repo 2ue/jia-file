@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"jia-file/internal/config"
 	"jia-file/internal/file"
 	"jia-file/internal/handler"
 	"jia-file/internal/logger"
@@ -11,8 +12,14 @@ import (
 )
 
 func main() {
+	// 加载配置
+	cfg, err := config.LoadConfig("")
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
+
 	// 初始化日志
-	if err := logger.Init("logs"); err != nil {
+	if err := logger.Init(cfg.Log.Dir); err != nil {
 		log.Fatal(err)
 	}
 
@@ -54,7 +61,7 @@ func main() {
 	)
 
 	// 启动服务器
-	port := ":8190"
+	port := ":" + cfg.Server.Port
 	logger.Info("Server starting on %s...", port)
 	if err := http.ListenAndServe(port, handler); err != nil {
 		logger.Error("Server error: %v", err)
