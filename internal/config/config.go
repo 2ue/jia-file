@@ -19,7 +19,7 @@ type Config struct {
 		Dir   string
 	}
 	File struct {
-		// 删除MaxSize和AllowedExtensions
+		RootPath string // 文件操作的根目录
 	}
 }
 
@@ -38,7 +38,11 @@ var (
 			Level: "info",
 			Dir:   "logs",
 		},
-		File: struct{}{},
+		File: struct {
+			RootPath string
+		}{
+			RootPath: "", // 默认为空，表示不限制根目录
+		},
 	}
 )
 
@@ -63,7 +67,9 @@ func LoadConfig(envPath string) (*Config, error) {
 	if dir := os.Getenv("LOG_DIR"); dir != "" {
 		config.Log.Dir = dir
 	}
-	// 删除MAX_FILE_SIZE和ALLOWED_EXTENSIONS相关解析
+	if rootPath := os.Getenv("ROOT_PATH"); rootPath != "" {
+		config.File.RootPath = rootPath
+	}
 	return &config, nil
 }
 

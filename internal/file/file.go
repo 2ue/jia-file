@@ -53,12 +53,16 @@ type Service interface {
 // service 文件服务实现
 type service struct {
 	config *config.Config
+	pathProcessor *PathProcessor
 }
 
 // NewService 创建文件服务实例
 func NewService() Service {
 	cfg, _ := config.LoadConfig("")
-	return &service{config: cfg}
+	return &service{
+		config: cfg,
+		pathProcessor: NewPathProcessor(cfg.File.RootPath),
+	}
 }
 
 // formatFileSize 将文件大小转换为人类可读的格式
@@ -166,18 +170,23 @@ func getFileInfo(entry os.DirEntry, path string) (FileInfo, error) {
 
 // List 实现 Service 接口的 List 方法
 func (s *service) List(path string) ([]FileInfo, error) {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	processedPath, err := s.pathProcessor.ProcessPath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(processedPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("directory does not exist: %s", path)
 	}
 
-	entries, err := os.ReadDir(path)
+	entries, err := os.ReadDir(processedPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading directory: %v", err)
 	}
 
 	files := make([]FileInfo, 0, len(entries))
 	for _, entry := range entries {
-		if fileInfo, err := getFileInfo(entry, path); err == nil {
+		if fileInfo, err := getFileInfo(entry, processedPath); err == nil {
 			files = append(files, fileInfo)
 		}
 	}
@@ -187,50 +196,83 @@ func (s *service) List(path string) ([]FileInfo, error) {
 
 // CreateDir 实现 Service 接口的 CreateDir 方法
 func (s *service) CreateDir(path string) error {
-	return os.MkdirAll(path, 0755)
+	processedPath, err := s.pathProcessor.ProcessPath(path)
+	if err != nil {
+		return err
+	}
+	return os.MkdirAll(processedPath, 0755)
 }
 
 // CreateFile 实现 Service 接口的 CreateFile 方法
 func (s *service) CreateFile(path string, content []byte) error {
+	processedPath, err := s.pathProcessor.ProcessPath(path)
+	if err != nil {
+		return err
+	}
+
 	// 检查文件是否已存在
-	if _, err := os.Stat(path); err == nil {
+	if _, err := os.Stat(processedPath); err == nil {
 		return fmt.Errorf("file already exists: %s", path)
 	}
 
 	// 确保父目录存在
-	dir := filepath.Dir(path)
+	dir := filepath.Dir(processedPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create parent directory: %v", err)
 	}
 
-	// 创建文件
-	return os.WriteFile(path, content, 0644)
+	return os.WriteFile(processedPath, content, 0644)
 }
 
 // Delete 实现 Service 接口的 Delete 方法
 func (s *service) Delete(path string) error {
+	processedPath, err := s.pathProcessor.ProcessPath(path)
+	if err != nil {
+		return err
+	}
+
 	// 检查文件是否存在
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	if _, err := os.Stat(processedPath); os.IsNotExist(err) {
 		return fmt.Errorf("file or directory does not exist: %s", path)
 	}
 
-	return os.RemoveAll(path)
+	return os.RemoveAll(processedPath)
 }
 
 // Move 实现 Service 接口的 Move 方法
 func (s *service) Move(src, dst string) error {
-	return os.Rename(src, dst)
+	processedSrc, err := s.pathProcessor.ProcessPath(src)
+	if err != nil {
+		return err
+	}
+
+	processedDst, err := s.pathProcessor.ProcessPath(dst)
+	if err != nil {
+		return err
+	}
+
+	return os.Rename(processedSrc, processedDst)
 }
 
 // Copy 实现 Service 接口的 Copy 方法
 func (s *service) Copy(src, dst string) error {
-	srcFile, err := os.Open(src)
+	processedSrc, err := s.pathProcessor.ProcessPath(src)
+	if err != nil {
+		return err
+	}
+
+	processedDst, err := s.pathProcessor.ProcessPath(dst)
+	if err != nil {
+		return err
+	}
+
+	srcFile, err := os.Open(processedSrc)
 	if err != nil {
 		return err
 	}
 	defer srcFile.Close()
 
-	dstFile, err := os.Create(dst)
+	dstFile, err := os.Create(processedDst)
 	if err != nil {
 		return err
 	}
@@ -242,7 +284,12 @@ func (s *service) Copy(src, dst string) error {
 
 // GetInfo 实现 Service 接口的 GetInfo 方法
 func (s *service) GetInfo(path string) (FileInfo, error) {
-	info, err := os.Stat(path)
+	processedPath, err := s.pathProcessor.ProcessPath(path)
+	if err != nil {
+		return FileInfo{}, err
+	}
+
+	info, err := os.Stat(processedPath)
 	if err != nil {
 		return FileInfo{}, err
 	}
@@ -254,7 +301,7 @@ func (s *service) GetInfo(path string) (FileInfo, error) {
 		SizeHuman:     formatFileSize(info.Size()),
 		Path:          path,
 		Ext:           filepath.Ext(info.Name()),
-		MimeType:      detectMimeType(path, info.IsDir()),
+		MimeType:      detectMimeType(processedPath, info.IsDir()),
 		CreateTime:    info.ModTime(),
 		ModTime:       info.ModTime(),
 		AccessTime:    info.ModTime(),
@@ -267,14 +314,19 @@ func (s *service) GetInfo(path string) (FileInfo, error) {
 
 // CreateDocument 实现 Service 接口的 CreateDocument 方法
 func (s *service) CreateDocument(path string, docType string, content string) error {
+	processedPath, err := s.pathProcessor.ProcessPath(path)
+	if err != nil {
+		return err
+	}
+
 	// 确保目录存在
-	dir := filepath.Dir(path)
+	dir := filepath.Dir(processedPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("创建目录失败: %v", err)
 	}
 
 	// 创建空文件
-	file, err := os.Create(path)
+	file, err := os.Create(processedPath)
 	if err != nil {
 		return err
 	}
