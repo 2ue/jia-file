@@ -34,6 +34,7 @@
 
 - Go 1.16 或更高版本
 - Air (用于热更新，可选)
+- Docker (可选，用于容器化部署)
 
 ### 安装依赖
 
@@ -73,6 +74,21 @@ go build -o jia-file.exe ./cmd/server
 air
 ```
 
+#### 方式三：使用 Docker（推荐生产环境使用）
+
+```bash
+# 构建 Docker 镜像
+docker build -t jia-file .
+
+# 运行容器
+docker run -d \
+  --name jia-file \
+  -p 8190:8190 \
+  -v /path/to/your/files:/app/files \
+  -e ROOT_PATH=/app/files \
+  jia-file
+```
+
 服务器将在 http://localhost:8190 启动。
 
 ### API 端点
@@ -96,6 +112,54 @@ air
 当未配置 `ROOT_PATH` 时：
 - 直接使用传入的路径，不进行任何修改
 - 支持相对路径和绝对路径
+
+### Docker 部署说明
+
+#### 构建镜像
+
+```bash
+docker build -t jia-file .
+```
+
+#### 运行容器
+
+基本运行：
+```bash
+docker run -d --name jia-file -p 8190:8190 jia-file
+```
+
+使用数据卷和环境变量：
+```bash
+docker run -d \
+  --name jia-file \
+  -p 8190:8190 \
+  -v /path/to/your/files:/app/files \
+  -e ROOT_PATH=/app/files \
+  -e LOG_LEVEL=info \
+  jia-file
+```
+
+#### 环境变量
+
+可以在运行容器时通过 `-e` 参数设置以下环境变量：
+
+- `PORT`: 服务器端口号（默认：8190）
+- `LOG_LEVEL`: 日志级别（默认：info）
+- `LOG_DIR`: 日志目录（默认：/app/logs）
+- `ROOT_PATH`: 文件操作的根目录
+
+#### 数据卷
+
+建议使用数据卷来持久化存储文件：
+
+```bash
+docker run -d \
+  --name jia-file \
+  -p 8190:8190 \
+  -v /host/path/to/files:/app/files \
+  -e ROOT_PATH=/app/files \
+  jia-file
+```
 
 ### 示例请求
 
